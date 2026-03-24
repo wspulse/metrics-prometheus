@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,27 +20,14 @@ import (
 func dialWS(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
 	dialer := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
-	c, _, err := dialer.Dial(url, nil)
+	c, resp, err := dialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("Dial failed: %v", err)
 	}
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
 	return c
-}
-
-func startServer(t *testing.T, collector *wsprom.Collector) (*httptest.Server, wspulse.Server) {
-	t.Helper()
-	srv := wspulse.NewServer(
-		func(r *http.Request) (string, string, error) {
-			return "test-room", "", nil
-		},
-		wspulse.WithMetrics(collector),
-	)
-	ts := httptest.NewServer(srv)
-	t.Cleanup(func() {
-		srv.Close()
-		ts.Close()
-	})
-	return ts, srv
 }
 
 func scrapeMetrics(t *testing.T, handler http.Handler) string {
@@ -61,15 +49,34 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 		wsprom.WithGatherer(reg),
 	)
 
-	ts, _ := startServer(t, collector)
+	connected := make(chan struct{}, 4)
+	disconnected := make(chan struct{}, 4)
+
+	srv := wspulse.NewServer(
+		func(r *http.Request) (string, string, error) {
+			return "test-room", "", nil
+		},
+		wspulse.WithMetrics(collector),
+		wspulse.WithOnConnect(func(_ wspulse.Connection) {
+			connected <- struct{}{}
+		}),
+		wspulse.WithOnDisconnect(func(_ wspulse.Connection, _ error) {
+			disconnected <- struct{}{}
+		}),
+	)
+	ts := httptest.NewServer(srv)
+	t.Cleanup(func() {
+		srv.Close()
+		ts.Close()
+	})
+
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
 
-	// Open 2 connections.
+	// Open 2 connections and wait for server to register them.
 	c1 := dialWS(t, wsURL)
 	c2 := dialWS(t, wsURL)
-
-	// Give server time to process registrations.
-	time.Sleep(100 * time.Millisecond)
+	<-connected
+	<-connected
 
 	body := scrapeMetrics(t, collector.Handler())
 
@@ -83,10 +90,11 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 		t.Errorf("expected 1 active room, got:\n%s", body)
 	}
 
-	// Close connections.
+	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
 	_ = c2.Close()
-	time.Sleep(200 * time.Millisecond)
+	<-disconnected
+	<-disconnected
 
 	body = scrapeMetrics(t, collector.Handler())
 
@@ -108,15 +116,22 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 		wsprom.WithGatherer(reg),
 	)
 
+	connected := make(chan struct{}, 4)
+	var broadcastDone sync.WaitGroup
+
 	var srv wspulse.Server
 	srv = wspulse.NewServer(
 		func(r *http.Request) (string, string, error) {
 			return "test-room", "", nil
 		},
 		wspulse.WithMetrics(collector),
+		wspulse.WithOnConnect(func(_ wspulse.Connection) {
+			connected <- struct{}{}
+		}),
 		wspulse.WithOnMessage(func(conn wspulse.Connection, f wspulse.Frame) {
-			// Echo back as broadcast.
+			broadcastDone.Add(1)
 			_ = srv.Broadcast(conn.RoomID(), f)
+			broadcastDone.Done()
 		}),
 	)
 	ts := httptest.NewServer(srv)
@@ -131,17 +146,24 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	defer c1.Close()
 	c2 := dialWS(t, wsURL)
 	defer c2.Close()
+	<-connected
+	<-connected
 
-	time.Sleep(100 * time.Millisecond)
-
-	// Send a message from c1 — should trigger MessageReceived + MessageBroadcast.
+	// Send a message from c1 — triggers MessageReceived + MessageBroadcast.
 	err := c1.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
 	if err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
-	// Wait for broadcast to be processed.
-	time.Sleep(200 * time.Millisecond)
+	// Wait for broadcast to complete.
+	broadcastDone.Wait()
+
+	// Read the broadcast messages on both clients to ensure MessageSent hooks fired.
+	// writePump sends asynchronously, so read from both to synchronize.
+	c1.SetReadDeadline(time.Now().Add(3 * time.Second))
+	c2.SetReadDeadline(time.Now().Add(3 * time.Second))
+	_, _, _ = c1.ReadMessage()
+	_, _, _ = c2.ReadMessage()
 
 	body := scrapeMetrics(t, collector.Handler())
 
@@ -151,7 +173,6 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	if !strings.Contains(body, `wspulse_messages_broadcast_total{room_id="test-room"} 1`) {
 		t.Errorf("expected 1 broadcast, got:\n%s", body)
 	}
-	// 2 connections in room → fanout = 2, each gets a MessageSent.
 	if !strings.Contains(body, `wspulse_messages_sent_total{room_id="test-room"} 2`) {
 		t.Errorf("expected 2 messages sent (fanout to 2 connections), got:\n%s", body)
 	}

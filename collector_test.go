@@ -21,7 +21,7 @@ func newTestCollector(t *testing.T, opts ...wsprom.Option) (*wsprom.Collector, *
 }
 
 // metricValue gathers the named metric from the registry and returns its value.
-// For counters and gauges with a single label set, pass the expected labels.
+// For metrics with multiple label sets, this helper sums the values across all series.
 func metricValue(t *testing.T, reg *prometheus.Registry, name string) float64 {
 	t.Helper()
 	mfs, err := reg.Gather()
@@ -51,7 +51,8 @@ func metricValue(t *testing.T, reg *prometheus.Registry, name string) float64 {
 }
 
 // metricValueWithLabel gathers the named metric with a specific label value.
-func metricValueWithLabel(t *testing.T, reg *prometheus.Registry, name, labelName, labelValue string) float64 {
+// Returns the value and whether a matching series was found.
+func metricValueWithLabel(t *testing.T, reg *prometheus.Registry, name, labelName, labelValue string) (float64, bool) {
 	t.Helper()
 	mfs, err := reg.Gather()
 	if err != nil {
@@ -63,17 +64,28 @@ func metricValueWithLabel(t *testing.T, reg *prometheus.Registry, name, labelNam
 				for _, lp := range m.GetLabel() {
 					if lp.GetName() == labelName && lp.GetValue() == labelValue {
 						if m.GetCounter() != nil {
-							return m.GetCounter().GetValue()
+							return m.GetCounter().GetValue(), true
 						}
 						if m.GetGauge() != nil {
-							return m.GetGauge().GetValue()
+							return m.GetGauge().GetValue(), true
 						}
 					}
 				}
 			}
 		}
 	}
-	return 0
+	return 0, false
+}
+
+// requireMetricWithLabel is a helper that calls metricValueWithLabel and
+// fails the test if the metric/label combination is not found.
+func requireMetricWithLabel(t *testing.T, reg *prometheus.Registry, name, labelName, labelValue string) float64 {
+	t.Helper()
+	v, found := metricValueWithLabel(t, reg, name, labelName, labelValue)
+	if !found {
+		t.Fatalf("metric %q with %s=%q not found", name, labelName, labelValue)
+	}
+	return v
 }
 
 // hasMetricWithName checks if a metric with the given name exists.
@@ -151,13 +163,13 @@ func TestConnectionOpened(t *testing.T) {
 	c.ConnectionOpened("room1", "conn2")
 	c.ConnectionOpened("room2", "conn3")
 
-	if got := metricValueWithLabel(t, reg, "wspulse_connections_opened_total", "room_id", "room1"); got != 2 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_opened_total", "room_id", "room1"); got != 2 {
 		t.Errorf("room1 opened: want 2, got %v", got)
 	}
-	if got := metricValueWithLabel(t, reg, "wspulse_connections_opened_total", "room_id", "room2"); got != 1 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_opened_total", "room_id", "room2"); got != 1 {
 		t.Errorf("room2 opened: want 1, got %v", got)
 	}
-	if got := metricValueWithLabel(t, reg, "wspulse_connections_active", "room_id", "room1"); got != 2 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_active", "room_id", "room1"); got != 2 {
 		t.Errorf("room1 active: want 2, got %v", got)
 	}
 }
@@ -169,10 +181,10 @@ func TestConnectionClosed(t *testing.T) {
 	c.ConnectionOpened("room1", "conn1")
 	c.ConnectionClosed("room1", "conn1", 5*time.Second)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_connections_active", "room_id", "room1"); got != 0 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_active", "room_id", "room1"); got != 0 {
 		t.Errorf("room1 active: want 0, got %v", got)
 	}
-	if got := metricValueWithLabel(t, reg, "wspulse_connections_closed_total", "room_id", "room1"); got != 1 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_closed_total", "room_id", "room1"); got != 1 {
 		t.Errorf("room1 closed: want 1, got %v", got)
 	}
 	// Histogram observation: just verify the metric exists and has data.
@@ -227,10 +239,10 @@ func TestMessageReceived(t *testing.T) {
 	c.MessageReceived("room1", 100)
 	c.MessageReceived("room1", 200)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_messages_received_total", "room_id", "room1"); got != 2 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_messages_received_total", "room_id", "room1"); got != 2 {
 		t.Errorf("room1 received: want 2, got %v", got)
 	}
-	if got := metricValueWithLabel(t, reg, "wspulse_messages_received_bytes_total", "room_id", "room1"); got != 300 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_messages_received_bytes_total", "room_id", "room1"); got != 300 {
 		t.Errorf("room1 received bytes: want 300, got %v", got)
 	}
 }
@@ -241,7 +253,7 @@ func TestMessageBroadcast(t *testing.T) {
 
 	c.MessageBroadcast("room1", 50, 10)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_messages_broadcast_total", "room_id", "room1"); got != 1 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_messages_broadcast_total", "room_id", "room1"); got != 1 {
 		t.Errorf("room1 broadcast: want 1, got %v", got)
 	}
 	if !hasMetricWithName(t, reg, "wspulse_broadcast_fanout") {
@@ -255,7 +267,7 @@ func TestMessageSent(t *testing.T) {
 
 	c.MessageSent("room1", "conn1", 100)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_messages_sent_total", "room_id", "room1"); got != 1 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_messages_sent_total", "room_id", "room1"); got != 1 {
 		t.Errorf("room1 sent: want 1, got %v", got)
 	}
 }
@@ -267,7 +279,7 @@ func TestFrameDropped(t *testing.T) {
 	c.FrameDropped("room1", "conn1")
 	c.FrameDropped("room1", "conn1")
 
-	if got := metricValueWithLabel(t, reg, "wspulse_frames_dropped_total", "room_id", "room1"); got != 2 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_frames_dropped_total", "room_id", "room1"); got != 2 {
 		t.Errorf("room1 dropped: want 2, got %v", got)
 	}
 }
@@ -278,7 +290,7 @@ func TestSendBufferUtilization(t *testing.T) {
 
 	c.SendBufferUtilization("room1", "conn1", 128, 256)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0.5 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0.5 {
 		t.Errorf("room1 buffer utilization: want 0.5, got %v", got)
 	}
 }
@@ -289,7 +301,7 @@ func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
 
 	c.SendBufferUtilization("room1", "conn1", 0, 0)
 
-	if got := metricValueWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0 {
 		t.Errorf("room1 buffer utilization (zero cap): want 0, got %v", got)
 	}
 }
@@ -302,7 +314,7 @@ func TestPongTimeout(t *testing.T) {
 
 	c.PongTimeout("room1", "conn1")
 
-	if got := metricValueWithLabel(t, reg, "wspulse_pong_timeouts_total", "room_id", "room1"); got != 1 {
+	if got := requireMetricWithLabel(t, reg, "wspulse_pong_timeouts_total", "room_id", "room1"); got != 1 {
 		t.Errorf("room1 pong timeouts: want 1, got %v", got)
 	}
 }

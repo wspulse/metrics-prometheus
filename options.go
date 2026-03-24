@@ -50,9 +50,12 @@ func WithNamespace(ns string) Option {
 	return func(c *collectorConfig) { c.namespace = ns }
 }
 
-// WithRoomLabel controls whether room_id is included as a label on metrics.
-// Defaults to true. Set to false in high-cardinality environments (e.g. one
-// room per livestream) to avoid excessive label combinations.
+// WithRoomLabel controls whether room_id is included as a label on per-room
+// metrics (i.e. connection, throughput, and heartbeat metrics that are scoped
+// to a specific room). Room-level aggregate metrics (rooms_active, rooms_created,
+// rooms_destroyed) never include room_id. Defaults to true. Set to false in
+// high-cardinality environments (e.g. one room per livestream) to avoid
+// excessive label combinations.
 func WithRoomLabel(enabled bool) Option {
 	return func(c *collectorConfig) { c.roomLabel = enabled }
 }
