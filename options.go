@@ -28,7 +28,7 @@ func defaultConfig() *collectorConfig {
 // Panics if r is nil.
 func WithRegisterer(r prometheus.Registerer) Option {
 	if r == nil {
-		panic("wspulse/metrics-prometheus: WithRegisterer: registerer must not be nil")
+		panic("wspulse: WithRegisterer: registerer must not be nil")
 	}
 	return func(c *collectorConfig) { c.registerer = r }
 }
@@ -38,7 +38,7 @@ func WithRegisterer(r prometheus.Registerer) Option {
 // Panics if g is nil.
 func WithGatherer(g prometheus.Gatherer) Option {
 	if g == nil {
-		panic("wspulse/metrics-prometheus: WithGatherer: gatherer must not be nil")
+		panic("wspulse: WithGatherer: gatherer must not be nil")
 	}
 	return func(c *collectorConfig) { c.gatherer = g }
 }

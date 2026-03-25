@@ -176,7 +176,7 @@ func NewCollector(opts ...Option) *Collector {
 	}
 	for _, col := range collectors {
 		if err := cfg.registerer.Register(col); err != nil {
-			panic(fmt.Sprintf("wspulse/metrics-prometheus: failed to register metric: %v", err))
+			panic(fmt.Sprintf("wspulse: failed to register metric: %v", err))
 		}
 	}
 

@@ -32,7 +32,7 @@ make tidy       # go mod tidy
 - **Go style**: same as wspulse/server — `gofmt`/`goimports`, GoDoc on all public symbols.
 - **Naming**: interface names use full words. Package name is `prometheus`.
 - **Metric naming**: `wspulse_` prefix, snake_case, follows [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/).
-- **Error format**: `fmt.Errorf("wspulse/metrics-prometheus: <context>: %w", err)`.
+- **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
 - **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
 
