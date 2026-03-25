@@ -185,11 +185,17 @@ func TestConnectionClosed(t *testing.T) {
 		t.Errorf("room1 active: want 0, got %v", got)
 	}
 	if got := requireMetricWithLabel(t, reg, "wspulse_connections_closed_total", "reason", "normal"); got != 1 {
-		t.Errorf("room1 closed (normal): want 1, got %v", got)
+		t.Errorf("room1 closed (reason=normal): want 1, got %v", got)
 	}
-	// Histogram observation: just verify the metric exists and has data.
+	if got := requireMetricWithLabel(t, reg, "wspulse_connections_closed_total", "room_id", "room1"); got != 1 {
+		t.Errorf("room1 closed (room_id=room1): want 1, got %v", got)
+	}
+	// Histogram observation: verify metric exists and carries both labels.
 	if !hasMetricWithName(t, reg, "wspulse_connection_duration_seconds") {
 		t.Error("connection_duration_seconds metric missing")
+	}
+	if !hasLabel(t, reg, "wspulse_connection_duration_seconds", "reason") {
+		t.Error("connection_duration_seconds missing reason label")
 	}
 }
 
