@@ -384,7 +384,7 @@ func TestRoomCreatedDestroyed(t *testing.T) {
 	}
 }
 
-// ─��� Throughput ───────────────────────────────────────────────────────────────
+// ── Throughput ─────────────────────────────────────────────────────────────────────
 
 func TestMessageReceived(t *testing.T) {
 	t.Parallel()
