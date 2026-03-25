@@ -67,6 +67,9 @@ func NewCollector(opts ...Option) *Collector {
 	roomSuccessLabels := append([]string{}, roomLabels...)
 	roomSuccessLabels = append(roomSuccessLabels, "success")
 
+	roomReasonLabels := append([]string{}, roomLabels...)
+	roomReasonLabels = append(roomReasonLabels, "reason")
+
 	c := &Collector{
 		cfg: cfg,
 
@@ -80,7 +83,7 @@ func NewCollector(opts ...Option) *Collector {
 			Namespace: ns,
 			Name:      "connections_closed_total",
 			Help:      "Total number of connections closed.",
-		}, roomLabels),
+		}, roomReasonLabels),
 		connectionsActive: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Name:      "connections_active",
@@ -91,7 +94,7 @@ func NewCollector(opts ...Option) *Collector {
 			Name:      "connection_duration_seconds",
 			Help:      "Duration of connections in seconds.",
 			Buckets:   []float64{1, 5, 15, 30, 60, 300, 900, 3600},
-		}, roomLabels),
+		}, roomReasonLabels),
 		resumeAttempts: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: ns,
 			Name:      "resume_attempts_total",
@@ -192,16 +195,18 @@ func (c *Collector) ConnectionOpened(roomID, _ string) {
 }
 
 // ConnectionClosed increments the connections closed counter, decrements the
-// active gauge, and observes the connection duration.
-func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration) {
+// active gauge, and observes the connection duration. The reason label
+// distinguishes disconnect causes (normal, kick, grace_expired, etc.).
+func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration, reason wspulse.DisconnectReason) {
+	r := string(reason)
 	if c.cfg.roomLabel {
-		c.connectionsClosed.WithLabelValues(roomID).Inc()
+		c.connectionsClosed.WithLabelValues(roomID, r).Inc()
 		c.connectionsActive.WithLabelValues(roomID).Dec()
-		c.connectionDuration.WithLabelValues(roomID).Observe(duration.Seconds())
+		c.connectionDuration.WithLabelValues(roomID, r).Observe(duration.Seconds())
 	} else {
-		c.connectionsClosed.WithLabelValues().Inc()
+		c.connectionsClosed.WithLabelValues(r).Inc()
 		c.connectionsActive.WithLabelValues().Dec()
-		c.connectionDuration.WithLabelValues().Observe(duration.Seconds())
+		c.connectionDuration.WithLabelValues(r).Observe(duration.Seconds())
 	}
 }
 
