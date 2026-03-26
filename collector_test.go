@@ -1,6 +1,9 @@
 package prometheus_test
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,12 +13,15 @@ import (
 	wspulse "github.com/wspulse/server"
 )
 
+// newTestCollector creates a Collector backed by an isolated registry with
+// room labels enabled. Pass additional options to override defaults.
 func newTestCollector(t *testing.T, opts ...wsprom.Option) (*wsprom.Collector, *prometheus.Registry) {
 	t.Helper()
 	reg := prometheus.NewRegistry()
 	allOpts := append([]wsprom.Option{
 		wsprom.WithRegisterer(reg),
 		wsprom.WithGatherer(reg),
+		wsprom.WithRoomLabel(true),
 	}, opts...)
 	return wsprom.NewCollector(allOpts...), reg
 }
@@ -47,6 +53,50 @@ func metricValue(t *testing.T, reg *prometheus.Registry, name string) float64 {
 		}
 	}
 	t.Fatalf("metric %q not found", name)
+	return 0
+}
+
+// histogramSampleCount returns the total sample count across all series of a histogram metric.
+func histogramSampleCount(t *testing.T, reg *prometheus.Registry, name string) uint64 {
+	t.Helper()
+	mfs, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if mf.GetName() == name {
+			var total uint64
+			for _, m := range mf.GetMetric() {
+				if m.GetHistogram() != nil {
+					total += m.GetHistogram().GetSampleCount()
+				}
+			}
+			return total
+		}
+	}
+	t.Fatalf("histogram %q not found", name)
+	return 0
+}
+
+// histogramSampleSum returns the total sample sum across all series of a histogram metric.
+func histogramSampleSum(t *testing.T, reg *prometheus.Registry, name string) float64 {
+	t.Helper()
+	mfs, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if mf.GetName() == name {
+			var total float64
+			for _, m := range mf.GetMetric() {
+				if m.GetHistogram() != nil {
+					total += m.GetHistogram().GetSampleSum()
+				}
+			}
+			return total
+		}
+	}
+	t.Fatalf("histogram %q not found", name)
 	return 0
 }
 
@@ -153,6 +203,72 @@ func TestWithGatherer_NilPanics(t *testing.T) {
 	_ = wsprom.WithGatherer(nil)
 }
 
+func TestWithNamespace_InvalidPanics(t *testing.T) {
+	t.Parallel()
+	cases := []string{"my-app", "123abc", "has space", "special!char"}
+	for _, ns := range cases {
+		func(ns string) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("expected panic for namespace %q", ns)
+				}
+			}()
+			_ = wsprom.WithNamespace(ns)
+		}(ns)
+	}
+}
+
+func TestWithNamespace_ValidDoesNotPanic(t *testing.T) {
+	t.Parallel()
+	valid := []string{"", "myapp", "my_app", "_private", "App123"}
+	for _, ns := range valid {
+		_ = wsprom.WithNamespace(ns) // must not panic
+	}
+}
+
+func TestWithConnectionDurationBuckets_EmptyPanics(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for empty buckets")
+		}
+	}()
+	_ = wsprom.WithConnectionDurationBuckets(nil)
+}
+
+func TestWithBroadcastFanoutBuckets_EmptyPanics(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for empty buckets")
+		}
+	}()
+	_ = wsprom.WithBroadcastFanoutBuckets(nil)
+}
+
+func TestWithSendBufferUtilizationBuckets_EmptyPanics(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for empty buckets")
+		}
+	}()
+	_ = wsprom.WithSendBufferUtilizationBuckets(nil)
+}
+
+func TestNewCollector_DuplicateRegistrationPanics(t *testing.T) {
+	t.Parallel()
+	reg := prometheus.NewRegistry()
+	_ = wsprom.NewCollector(wsprom.WithRegisterer(reg), wsprom.WithGatherer(reg))
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for duplicate registration")
+		}
+	}()
+	_ = wsprom.NewCollector(wsprom.WithRegisterer(reg), wsprom.WithGatherer(reg))
+}
+
 // ── Connection lifecycle ─────────────────────────────────────────────────────
 
 func TestConnectionOpened(t *testing.T) {
@@ -199,6 +315,27 @@ func TestConnectionClosed(t *testing.T) {
 	}
 }
 
+func TestConnectionClosed_WithRoomLabelFalse(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t, wsprom.WithRoomLabel(false))
+
+	c.ConnectionOpened("room1", "conn1")
+	c.ConnectionClosed("room1", "conn1", 5*time.Second, wspulse.DisconnectNormal)
+
+	if got := metricValue(t, reg, "wspulse_connections_active"); got != 0 {
+		t.Errorf("active: want 0, got %v", got)
+	}
+	if got := metricValue(t, reg, "wspulse_connections_closed_total"); got != 1 {
+		t.Errorf("closed: want 1, got %v", got)
+	}
+	if hasLabel(t, reg, "wspulse_connections_closed_total", "room_id") {
+		t.Error("room_id label should not exist when WithRoomLabel(false)")
+	}
+	if !hasLabel(t, reg, "wspulse_connections_closed_total", "reason") {
+		t.Error("reason label should still exist when WithRoomLabel(false)")
+	}
+}
+
 func TestResumeAttempt(t *testing.T) {
 	t.Parallel()
 	c, reg := newTestCollector(t)
@@ -207,6 +344,17 @@ func TestResumeAttempt(t *testing.T) {
 
 	if got := metricValue(t, reg, "wspulse_resume_attempts_total"); got != 1 {
 		t.Errorf("resume attempts: want 1, got %v", got)
+	}
+}
+
+func TestResumeAttempt_Failure(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t)
+
+	c.ResumeAttempt("room1", "conn1", false)
+
+	if got := requireMetricWithLabel(t, reg, "wspulse_resume_attempts_total", "success", "false"); got != 1 {
+		t.Errorf("failed resume attempts: want 1, got %v", got)
 	}
 }
 
@@ -236,7 +384,7 @@ func TestRoomCreatedDestroyed(t *testing.T) {
 	}
 }
 
-// ── Throughput ───────────────────────────────────────────────────────────────
+// ── Throughput ─────────────────────────────────────────────────────────────────────
 
 func TestMessageReceived(t *testing.T) {
 	t.Parallel()
@@ -264,6 +412,21 @@ func TestMessageBroadcast(t *testing.T) {
 	}
 	if !hasMetricWithName(t, reg, "wspulse_broadcast_fanout") {
 		t.Error("broadcast_fanout metric missing")
+	}
+}
+
+func TestMessageBroadcast_FanoutHistogramValue(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t)
+
+	c.MessageBroadcast("room1", 50, 10)
+	c.MessageBroadcast("room1", 50, 20)
+
+	if got := histogramSampleCount(t, reg, "wspulse_broadcast_fanout"); got != 2 {
+		t.Errorf("fanout sample count: want 2, got %v", got)
+	}
+	if got := histogramSampleSum(t, reg, "wspulse_broadcast_fanout"); got != 30 {
+		t.Errorf("fanout sample sum: want 30 (10+20), got %v", got)
 	}
 }
 
@@ -295,9 +458,14 @@ func TestSendBufferUtilization(t *testing.T) {
 	c, reg := newTestCollector(t)
 
 	c.SendBufferUtilization("room1", "conn1", 128, 256)
+	c.SendBufferUtilization("room1", "conn2", 64, 256)
 
-	if got := requireMetricWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0.5 {
-		t.Errorf("room1 buffer utilization: want 0.5, got %v", got)
+	// Histogram: two observations, sum = 0.5 + 0.25 = 0.75
+	if got := histogramSampleCount(t, reg, "wspulse_send_buffer_utilization"); got != 2 {
+		t.Errorf("buffer utilization sample count: want 2, got %v", got)
+	}
+	if got := histogramSampleSum(t, reg, "wspulse_send_buffer_utilization"); got != 0.75 {
+		t.Errorf("buffer utilization sample sum: want 0.75, got %v", got)
 	}
 }
 
@@ -307,8 +475,11 @@ func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
 
 	c.SendBufferUtilization("room1", "conn1", 0, 0)
 
-	if got := requireMetricWithLabel(t, reg, "wspulse_send_buffer_utilization_ratio", "room_id", "room1"); got != 0 {
-		t.Errorf("room1 buffer utilization (zero cap): want 0, got %v", got)
+	if got := histogramSampleCount(t, reg, "wspulse_send_buffer_utilization"); got != 1 {
+		t.Errorf("buffer utilization sample count: want 1, got %v", got)
+	}
+	if got := histogramSampleSum(t, reg, "wspulse_send_buffer_utilization"); got != 0 {
+		t.Errorf("buffer utilization sample sum: want 0, got %v", got)
 	}
 }
 
@@ -348,6 +519,18 @@ func TestWithRoomLabel_False(t *testing.T) {
 	}
 }
 
+func TestWithRoomLabel_DefaultIsFalse(t *testing.T) {
+	t.Parallel()
+	reg := prometheus.NewRegistry()
+	c := wsprom.NewCollector(wsprom.WithRegisterer(reg), wsprom.WithGatherer(reg))
+
+	c.ConnectionOpened("room1", "conn1")
+
+	if hasLabel(t, reg, "wspulse_connections_opened_total", "room_id") {
+		t.Error("default roomLabel should be false; room_id label should not exist")
+	}
+}
+
 // ── WithNamespace ────────────────────────────────────────────────────────────
 
 func TestWithNamespace(t *testing.T) {
@@ -370,6 +553,41 @@ func TestWithNamespace(t *testing.T) {
 	}
 }
 
+// ── Custom bucket options ────────────────────────────────────────────────────
+
+func TestWithConnectionDurationBuckets(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t, wsprom.WithConnectionDurationBuckets([]float64{1, 10, 100}))
+
+	c.ConnectionClosed("room1", "conn1", 5*time.Second, wspulse.DisconnectNormal)
+
+	if got := histogramSampleCount(t, reg, "wspulse_connection_duration_seconds"); got != 1 {
+		t.Errorf("sample count: want 1, got %v", got)
+	}
+}
+
+func TestWithBroadcastFanoutBuckets(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t, wsprom.WithBroadcastFanoutBuckets([]float64{5, 50}))
+
+	c.MessageBroadcast("room1", 50, 10)
+
+	if got := histogramSampleCount(t, reg, "wspulse_broadcast_fanout"); got != 1 {
+		t.Errorf("sample count: want 1, got %v", got)
+	}
+}
+
+func TestWithSendBufferUtilizationBuckets(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t, wsprom.WithSendBufferUtilizationBuckets([]float64{0.5, 1.0}))
+
+	c.SendBufferUtilization("room1", "conn1", 128, 256)
+
+	if got := histogramSampleCount(t, reg, "wspulse_send_buffer_utilization"); got != 1 {
+		t.Errorf("sample count: want 1, got %v", got)
+	}
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 func TestHandler_ReturnsNonNil(t *testing.T) {
@@ -377,6 +595,31 @@ func TestHandler_ReturnsNonNil(t *testing.T) {
 	c, _ := newTestCollector(t)
 	if c.Handler() == nil {
 		t.Error("Handler() returned nil")
+	}
+}
+
+func TestHandler_ServesPrometheusFormat(t *testing.T) {
+	t.Parallel()
+	c, _ := newTestCollector(t)
+
+	c.RoomCreated("room1")
+	c.ConnectionOpened("room1", "conn1")
+
+	rec := httptest.NewRecorder()
+	c.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: want 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "wspulse_rooms_created_total 1") {
+		t.Errorf("expected rooms_created_total in scrape output, got:\n%s", body)
+	}
+	if !strings.Contains(body, "# HELP wspulse_rooms_created_total") {
+		t.Error("expected HELP line in scrape output")
+	}
+	if !strings.Contains(body, "# TYPE wspulse_rooms_created_total counter") {
+		t.Error("expected TYPE line in scrape output")
 	}
 }
 
@@ -411,5 +654,4 @@ func TestScrapeOutput_ContainsExpectedMetrics(t *testing.T) {
 			t.Errorf("missing expected metric %q in scrape output", name)
 		}
 	}
-
 }

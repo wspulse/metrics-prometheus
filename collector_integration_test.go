@@ -47,6 +47,7 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	collector := wsprom.NewCollector(
 		wsprom.WithRegisterer(reg),
 		wsprom.WithGatherer(reg),
+		wsprom.WithRoomLabel(true),
 	)
 
 	connected := make(chan struct{}, 4)
@@ -114,6 +115,7 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	collector := wsprom.NewCollector(
 		wsprom.WithRegisterer(reg),
 		wsprom.WithGatherer(reg),
+		wsprom.WithRoomLabel(true),
 	)
 
 	connected := make(chan struct{}, 4)

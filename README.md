@@ -38,7 +38,7 @@ http.Handle("/metrics", collector.Handler())
 http.ListenAndServe(":8080", nil)
 ```
 
-Custom registry and namespace:
+Custom registry with per-room metrics (opt-in — only when room count is bounded):
 
 ```go
 reg := prometheus.NewRegistry()
@@ -46,7 +46,7 @@ collector := wsprom.NewCollector(
     wsprom.WithRegisterer(reg),
     wsprom.WithGatherer(reg),
     wsprom.WithNamespace("myapp"),
-    wsprom.WithRoomLabel(false), // disable room_id label for high-cardinality environments
+    wsprom.WithRoomLabel(true),
 )
 ```
 
@@ -54,6 +54,7 @@ collector := wsprom.NewCollector(
 
 ## Documentation
 
+- [Usage Guide](doc/usage.md) — configuration options and metrics reference
 - [Metrics Integration Guide](https://github.com/wspulse/docs/blob/main/guides/metrics.md)
 
 ## Related Modules

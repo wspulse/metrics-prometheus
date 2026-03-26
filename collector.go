@@ -37,7 +37,7 @@ type Collector struct {
 	broadcastFanout       *prometheus.HistogramVec
 	messagesSent          *prometheus.CounterVec
 	framesDropped         *prometheus.CounterVec
-	sendBufferUtilization *prometheus.GaugeVec
+	sendBufferUtilization *prometheus.HistogramVec
 
 	// Heartbeat
 	pongTimeouts *prometheus.CounterVec
@@ -93,7 +93,7 @@ func NewCollector(opts ...Option) *Collector {
 			Namespace: ns,
 			Name:      "connection_duration_seconds",
 			Help:      "Duration of connections in seconds.",
-			Buckets:   []float64{1, 5, 15, 30, 60, 300, 900, 3600},
+			Buckets:   cfg.connectionDurationBuckets,
 		}, roomReasonLabels),
 		resumeAttempts: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: ns,
@@ -138,7 +138,7 @@ func NewCollector(opts ...Option) *Collector {
 			Namespace: ns,
 			Name:      "broadcast_fanout",
 			Help:      "Number of recipients per broadcast.",
-			Buckets:   []float64{1, 2, 5, 10, 25, 50, 100, 500, 1000},
+			Buckets:   cfg.broadcastFanoutBuckets,
 		}, roomLabels),
 		messagesSent: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: ns,
@@ -150,10 +150,11 @@ func NewCollector(opts ...Option) *Collector {
 			Name:      "frames_dropped_total",
 			Help:      "Total number of frames dropped due to backpressure.",
 		}, roomLabels),
-		sendBufferUtilization: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		sendBufferUtilization: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: ns,
-			Name:      "send_buffer_utilization_ratio",
-			Help:      "Send buffer utilization ratio (used/capacity). Reported per write.",
+			Name:      "send_buffer_utilization",
+			Help:      "Send buffer utilization ratio (used/capacity). Each connection report is one observation.",
+			Buckets:   cfg.sendBufferUtilizationBuckets,
 		}, roomLabels),
 
 		// Heartbeat
@@ -272,16 +273,18 @@ func (c *Collector) FrameDropped(roomID, _ string) {
 	}
 }
 
-// SendBufferUtilization sets the send buffer utilization ratio gauge.
+// SendBufferUtilization observes the send buffer utilization ratio.
+// Each call records one observation in the histogram, capturing the
+// distribution across all connections rather than a last-write-wins value.
 func (c *Collector) SendBufferUtilization(roomID, _ string, used, capacity int) {
 	ratio := 0.0
 	if capacity > 0 {
 		ratio = float64(used) / float64(capacity)
 	}
 	if c.cfg.roomLabel {
-		c.sendBufferUtilization.WithLabelValues(roomID).Set(ratio)
+		c.sendBufferUtilization.WithLabelValues(roomID).Observe(ratio)
 	} else {
-		c.sendBufferUtilization.WithLabelValues().Set(ratio)
+		c.sendBufferUtilization.WithLabelValues().Observe(ratio)
 	}
 }
 
