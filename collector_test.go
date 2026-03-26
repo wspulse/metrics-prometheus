@@ -340,21 +340,30 @@ func TestResumeAttempt(t *testing.T) {
 	t.Parallel()
 	c, reg := newTestCollector(t)
 
-	c.ResumeAttempt("room1", "conn1", true)
+	c.ResumeAttempt("room1", "conn1")
+
+	if got := requireMetricWithLabel(t, reg, "wspulse_resume_attempts_total", "room_id", "room1"); got != 1 {
+		t.Errorf("resume attempts: want 1, got %v", got)
+	}
+	if hasLabel(t, reg, "wspulse_resume_attempts_total", "success") {
+		t.Error("success label should not exist on resume_attempts_total")
+	}
+}
+
+func TestResumeAttempt_WithRoomLabelFalse(t *testing.T) {
+	t.Parallel()
+	c, reg := newTestCollector(t, wsprom.WithRoomLabel(false))
+
+	c.ResumeAttempt("room1", "conn1")
 
 	if got := metricValue(t, reg, "wspulse_resume_attempts_total"); got != 1 {
 		t.Errorf("resume attempts: want 1, got %v", got)
 	}
-}
-
-func TestResumeAttempt_Failure(t *testing.T) {
-	t.Parallel()
-	c, reg := newTestCollector(t)
-
-	c.ResumeAttempt("room1", "conn1", false)
-
-	if got := requireMetricWithLabel(t, reg, "wspulse_resume_attempts_total", "success", "false"); got != 1 {
-		t.Errorf("failed resume attempts: want 1, got %v", got)
+	if hasLabel(t, reg, "wspulse_resume_attempts_total", "room_id") {
+		t.Error("room_id label should not exist when WithRoomLabel(false)")
+	}
+	if hasLabel(t, reg, "wspulse_resume_attempts_total", "success") {
+		t.Error("success label should not exist on resume_attempts_total")
 	}
 }
 
