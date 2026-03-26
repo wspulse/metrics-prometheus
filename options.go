@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -80,15 +81,15 @@ func WithGatherer(g prometheus.Gatherer) Option {
 // Panics if ns contains characters outside [a-zA-Z0-9_] or starts with a digit.
 func WithNamespace(ns string) Option {
 	if ns != "" && !validNamespace.MatchString(ns) {
-		panic("wspulse: WithNamespace: namespace must match [a-zA-Z_][a-zA-Z0-9_]*, got " + ns)
+		panic(fmt.Sprintf("wspulse: WithNamespace: namespace must match [a-zA-Z_][a-zA-Z0-9_]*, got %q", ns))
 	}
 	return func(c *collectorConfig) { c.namespace = ns }
 }
 
 // WithRoomLabel controls whether room_id is included as a label on per-room
 // metrics (i.e. connection, throughput, and heartbeat metrics that are scoped
-// to a specific room). Room-level aggregate metrics (rooms_active, rooms_created,
-// rooms_destroyed) never include room_id.
+// to a specific room). Room-level aggregate metrics (rooms_active, rooms_created_total,
+// rooms_destroyed_total) never include room_id.
 //
 // Defaults to false. Enable with WithRoomLabel(true) only when the number of
 // distinct rooms is bounded and known (e.g. a fixed set of chat rooms). In
