@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/wspulse/metrics-prometheus/actions/workflows/ci.yml/badge.svg)](https://github.com/wspulse/metrics-prometheus/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-prometheus.svg)](https://pkg.go.dev/github.com/wspulse/metrics-prometheus)
+[![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
+[![client_golang](https://img.shields.io/badge/client_golang-v1.22.0-blue.svg?logo=prometheus)](https://github.com/prometheus/client_golang)
+[![wspulse/server](https://img.shields.io/badge/wspulse%2Fserver-%3E%3D_v0.5.0-blue.svg)](https://github.com/wspulse/server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Prometheus adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
@@ -37,7 +40,7 @@ http.Handle("/metrics", collector.Handler())
 http.ListenAndServe(":8080", nil)
 ```
 
-Custom registry and namespace:
+Custom registry with per-room metrics (opt-in — only when room count is bounded):
 
 ```go
 reg := prometheus.NewRegistry()
@@ -45,7 +48,7 @@ collector := wsprom.NewCollector(
     wsprom.WithRegisterer(reg),
     wsprom.WithGatherer(reg),
     wsprom.WithNamespace("myapp"),
-    wsprom.WithRoomLabel(false), // disable room_id label for high-cardinality environments
+    wsprom.WithRoomLabel(true),
 )
 ```
 
@@ -53,6 +56,7 @@ collector := wsprom.NewCollector(
 
 ## Documentation
 
+- [Usage Guide](doc/usage.md) — configuration options and metrics reference
 - [Metrics Integration Guide](https://github.com/wspulse/docs/blob/main/guides/metrics.md)
 
 ## Related Modules
