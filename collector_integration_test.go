@@ -164,8 +164,12 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// writePump sends asynchronously, so read from both to synchronize.
 	c1.SetReadDeadline(time.Now().Add(3 * time.Second))
 	c2.SetReadDeadline(time.Now().Add(3 * time.Second))
-	_, _, _ = c1.ReadMessage()
-	_, _, _ = c2.ReadMessage()
+	if _, _, err := c1.ReadMessage(); err != nil {
+		t.Fatalf("read from c1: %v", err)
+	}
+	if _, _, err := c2.ReadMessage(); err != nil {
+		t.Fatalf("read from c2: %v", err)
+	}
 
 	body := scrapeMetrics(t, collector.Handler())
 
