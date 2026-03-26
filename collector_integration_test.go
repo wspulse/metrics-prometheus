@@ -99,7 +99,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	body = scrapeMetrics(t, collector.Handler())
 
-	if !strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) {
+	if !strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) &&
+		!strings.Contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`) {
 		t.Errorf("expected 2 connections closed (reason=normal), got:\n%s", body)
 	}
 	if !strings.Contains(body, `wspulse_connections_active{room_id="test-room"} 0`) {
