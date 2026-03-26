@@ -3,6 +3,8 @@
 [![CI](https://github.com/wspulse/metrics-prometheus/actions/workflows/ci.yml/badge.svg)](https://github.com/wspulse/metrics-prometheus/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-prometheus.svg)](https://pkg.go.dev/github.com/wspulse/metrics-prometheus)
 [![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
+[![Prometheus](https://img.shields.io/badge/Prometheus-v1.22.0-blue.svg?logo=prometheus)](https://github.com/prometheus/client_golang)
+[![wspulse/server](https://img.shields.io/badge/wspulse%2Fserver-%3E%3D_v0.5.0-blue.svg)](https://github.com/wspulse/server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Prometheus adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
