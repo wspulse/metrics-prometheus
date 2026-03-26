@@ -102,8 +102,9 @@ func WithRoomLabel(enabled bool) Option {
 
 // WithConnectionDurationBuckets sets custom histogram buckets for the
 // connection_duration_seconds metric. Defaults cover 1s to 24h.
-// Panics if buckets is empty or if values are invalid (not strictly
-// increasing, contain NaN, or contain +Inf).
+// Panics if buckets is empty. Invalid bucket values (not strictly
+// increasing, contain NaN, or contain +Inf) cause a panic at
+// NewCollector time when Prometheus validates the histogram.
 func WithConnectionDurationBuckets(buckets []float64) Option {
 	if len(buckets) == 0 {
 		panic("wspulse: WithConnectionDurationBuckets: buckets must not be empty")
@@ -113,8 +114,9 @@ func WithConnectionDurationBuckets(buckets []float64) Option {
 
 // WithBroadcastFanoutBuckets sets custom histogram buckets for the
 // broadcast_fanout metric. Defaults cover 1 to 1000 recipients.
-// Panics if buckets is empty or if values are invalid (not strictly
-// increasing, contain NaN, or contain +Inf).
+// Panics if buckets is empty. Invalid bucket values (not strictly
+// increasing, contain NaN, or contain +Inf) cause a panic at
+// NewCollector time when Prometheus validates the histogram.
 func WithBroadcastFanoutBuckets(buckets []float64) Option {
 	if len(buckets) == 0 {
 		panic("wspulse: WithBroadcastFanoutBuckets: buckets must not be empty")
@@ -125,8 +127,9 @@ func WithBroadcastFanoutBuckets(buckets []float64) Option {
 // WithSendBufferUtilizationBuckets sets custom histogram buckets for the
 // send_buffer_utilization metric. Defaults cover 0.1 to 1.0 ratio with
 // finer granularity near saturation.
-// Panics if buckets is empty or if values are invalid (not strictly
-// increasing, contain NaN, or contain +Inf).
+// Panics if buckets is empty. Invalid bucket values (not strictly
+// increasing, contain NaN, or contain +Inf) cause a panic at
+// NewCollector time when Prometheus validates the histogram.
 func WithSendBufferUtilizationBuckets(buckets []float64) Option {
 	if len(buckets) == 0 {
 		panic("wspulse: WithSendBufferUtilizationBuckets: buckets must not be empty")
