@@ -5,7 +5,6 @@ package prometheus
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -64,9 +63,6 @@ func NewCollector(opts ...Option) *Collector {
 		roomLabels = []string{"room_id"}
 	}
 
-	roomSuccessLabels := append([]string{}, roomLabels...)
-	roomSuccessLabels = append(roomSuccessLabels, "success")
-
 	roomReasonLabels := append([]string{}, roomLabels...)
 	roomReasonLabels = append(roomReasonLabels, "reason")
 
@@ -99,7 +95,7 @@ func NewCollector(opts ...Option) *Collector {
 			Namespace: ns,
 			Name:      "resume_attempts_total",
 			Help:      "Total number of session resume attempts.",
-		}, roomSuccessLabels),
+		}, roomLabels),
 
 		// Room
 		roomsActive: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -212,12 +208,11 @@ func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration, r
 }
 
 // ResumeAttempt increments the resume attempts counter.
-func (c *Collector) ResumeAttempt(roomID, _ string, success bool) {
-	s := strconv.FormatBool(success)
+func (c *Collector) ResumeAttempt(roomID, _ string) {
 	if c.cfg.roomLabel {
-		c.resumeAttempts.WithLabelValues(roomID, s).Inc()
+		c.resumeAttempts.WithLabelValues(roomID).Inc()
 	} else {
-		c.resumeAttempts.WithLabelValues(s).Inc()
+		c.resumeAttempts.WithLabelValues().Inc()
 	}
 }
 

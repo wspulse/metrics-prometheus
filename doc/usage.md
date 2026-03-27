@@ -123,7 +123,7 @@ collector := wsprom.NewCollector(
 | `wspulse_connections_closed_total` | Counter | `room_id`*, `reason` | Total connections closed |
 | `wspulse_connections_active` | Gauge | `room_id`* | Currently active connections |
 | `wspulse_connection_duration_seconds` | Histogram | `room_id`*, `reason` | Connection duration distribution |
-| `wspulse_resume_attempts_total` | Counter | `room_id`*, `success` | Session resume attempts |
+| `wspulse_resume_attempts_total` | Counter | `room_id`* | Session resume attempts |
 
 ### Room
 
