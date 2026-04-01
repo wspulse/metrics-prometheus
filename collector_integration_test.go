@@ -12,6 +12,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	wsprom "github.com/wspulse/metrics-prometheus"
 	wspulse "github.com/wspulse/server"
@@ -22,7 +24,7 @@ func awaitChan(t *testing.T, ch <-chan struct{}, label string) {
 	select {
 	case <-ch:
 	case <-time.After(3 * time.Second):
-		t.Fatalf("timed out waiting for %s", label)
+		require.Failf(t, "timeout", "timed out waiting for %s", label)
 	}
 }
 
@@ -30,9 +32,7 @@ func dialWS(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
 	dialer := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
 	c, resp, err := dialer.Dial(url, nil)
-	if err != nil {
-		t.Fatalf("Dial failed: %v", err)
-	}
+	require.NoError(t, err, "Dial failed")
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -43,9 +43,7 @@ func scrapeMetrics(t *testing.T, handler http.Handler) string {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("scrape /metrics: status %d", rec.Code)
-	}
+	require.Equal(t, http.StatusOK, rec.Code, "scrape /metrics")
 	return rec.Body.String()
 }
 
@@ -90,15 +88,9 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	body := scrapeMetrics(t, collector.Handler())
 
-	if !strings.Contains(body, `wspulse_connections_opened_total{room_id="test-room"} 2`) {
-		t.Errorf("expected 2 connections opened, got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_connections_active{room_id="test-room"} 2`) {
-		t.Errorf("expected 2 active connections, got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_rooms_active 1`) {
-		t.Errorf("expected 1 active room, got:\n%s", body)
-	}
+	assert.Contains(t, body, `wspulse_connections_opened_total{room_id="test-room"} 2`, "expected 2 connections opened")
+	assert.Contains(t, body, `wspulse_connections_active{room_id="test-room"} 2`, "expected 2 active connections")
+	assert.Contains(t, body, `wspulse_rooms_active 1`, "expected 1 active room")
 
 	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
@@ -108,16 +100,11 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	body = scrapeMetrics(t, collector.Handler())
 
-	if !strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) &&
-		!strings.Contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`) {
-		t.Errorf("expected 2 connections closed (reason=normal), got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_connections_active{room_id="test-room"} 0`) {
-		t.Errorf("expected 0 active connections after close, got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_rooms_active 0`) {
-		t.Errorf("expected 0 active rooms after close, got:\n%s", body)
-	}
+	closedMatch := strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) ||
+		strings.Contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`)
+	assert.True(t, closedMatch, "expected 2 connections closed (reason=normal)")
+	assert.Contains(t, body, `wspulse_connections_active{room_id="test-room"} 0`, "expected 0 active connections after close")
+	assert.Contains(t, body, `wspulse_rooms_active 0`, "expected 0 active rooms after close")
 }
 
 func TestIntegration_MessageMetrics(t *testing.T) {
@@ -163,9 +150,7 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Send a message from c1 — triggers MessageReceived + MessageBroadcast.
 	broadcastDone.Add(1)
 	err := c1.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
-	if err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	require.NoError(t, err, "write")
 
 	// Wait for broadcast to complete.
 	broadcastDone.Wait()
@@ -174,22 +159,14 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// writePump sends asynchronously, so read from both to synchronize.
 	c1.SetReadDeadline(time.Now().Add(3 * time.Second))
 	c2.SetReadDeadline(time.Now().Add(3 * time.Second))
-	if _, _, err := c1.ReadMessage(); err != nil {
-		t.Fatalf("read from c1: %v", err)
-	}
-	if _, _, err := c2.ReadMessage(); err != nil {
-		t.Fatalf("read from c2: %v", err)
-	}
+	_, _, err = c1.ReadMessage()
+	require.NoError(t, err, "read from c1")
+	_, _, err = c2.ReadMessage()
+	require.NoError(t, err, "read from c2")
 
 	body := scrapeMetrics(t, collector.Handler())
 
-	if !strings.Contains(body, `wspulse_messages_received_total{room_id="test-room"} 1`) {
-		t.Errorf("expected 1 message received, got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_messages_broadcast_total{room_id="test-room"} 1`) {
-		t.Errorf("expected 1 broadcast, got:\n%s", body)
-	}
-	if !strings.Contains(body, `wspulse_messages_sent_total{room_id="test-room"} 2`) {
-		t.Errorf("expected 2 messages sent (fanout to 2 connections), got:\n%s", body)
-	}
+	assert.Contains(t, body, `wspulse_messages_received_total{room_id="test-room"} 1`, "expected 1 message received")
+	assert.Contains(t, body, `wspulse_messages_broadcast_total{room_id="test-room"} 1`, "expected 1 broadcast")
+	assert.Contains(t, body, `wspulse_messages_sent_total{room_id="test-room"} 2`, "expected 2 messages sent (fanout to 2 connections)")
 }
