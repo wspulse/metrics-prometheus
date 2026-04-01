@@ -17,6 +17,15 @@ import (
 	wspulse "github.com/wspulse/server"
 )
 
+func awaitChan(t *testing.T, ch <-chan struct{}, label string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("timed out waiting for %s", label)
+	}
+}
+
 func dialWS(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
 	dialer := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
@@ -76,8 +85,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Open 2 connections and wait for server to register them.
 	c1 := dialWS(t, wsURL)
 	c2 := dialWS(t, wsURL)
-	<-connected
-	<-connected
+	awaitChan(t, connected, "connected (c1)")
+	awaitChan(t, connected, "connected (c2)")
 
 	body := scrapeMetrics(t, collector.Handler())
 
@@ -94,8 +103,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
 	_ = c2.Close()
-	<-disconnected
-	<-disconnected
+	awaitChan(t, disconnected, "disconnected (c1)")
+	awaitChan(t, disconnected, "disconnected (c2)")
 
 	body = scrapeMetrics(t, collector.Handler())
 
@@ -148,8 +157,8 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	defer c1.Close()
 	c2 := dialWS(t, wsURL)
 	defer c2.Close()
-	<-connected
-	<-connected
+	awaitChan(t, connected, "connected (c1)")
+	awaitChan(t, connected, "connected (c2)")
 
 	// Send a message from c1 — triggers MessageReceived + MessageBroadcast.
 	broadcastDone.Add(1)
