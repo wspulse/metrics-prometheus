@@ -102,7 +102,7 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	closedMatch := strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) ||
 		strings.Contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`)
-	assert.True(t, closedMatch, "expected 2 connections closed (reason=normal)")
+	assert.Truef(t, closedMatch, "expected 2 connections closed (reason=normal) in metrics body:\n%s", body)
 	assert.Contains(t, body, `wspulse_connections_active{room_id="test-room"} 0`, "expected 0 active connections after close")
 	assert.Contains(t, body, `wspulse_rooms_active 0`, "expected 0 active rooms after close")
 }

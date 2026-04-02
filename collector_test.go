@@ -188,7 +188,7 @@ func TestWithNamespace_InvalidPanics(t *testing.T) {
 	t.Parallel()
 	cases := []string{"my-app", "123abc", "has space", "special!char"}
 	for _, ns := range cases {
-		require.Panicsf(t, func() {
+		assert.Panicsf(t, func() {
 			_ = wsprom.WithNamespace(ns)
 		}, "expected panic for namespace %q", ns)
 	}
@@ -437,8 +437,14 @@ func TestWithNamespace(t *testing.T) {
 	c.RoomCreated("room1")
 	c.ConnectionOpened("room1", "conn1")
 
-	assert.True(t, hasMetricWithName(t, reg, "myapp_wspulse_rooms_created_total"), "expected myapp_wspulse_rooms_created_total")
-	assert.True(t, hasMetricWithName(t, reg, "myapp_wspulse_connections_opened_total"), "expected myapp_wspulse_connections_opened_total")
+	metrics, err := reg.Gather()
+	require.NoError(t, err)
+	var names []string
+	for _, m := range metrics {
+		names = append(names, m.GetName())
+	}
+	assert.Contains(t, names, "myapp_wspulse_rooms_created_total", "gathered: %v", names)
+	assert.Contains(t, names, "myapp_wspulse_connections_opened_total", "gathered: %v", names)
 }
 
 // ── Custom bucket options ────────────────────────────────────────────────────
