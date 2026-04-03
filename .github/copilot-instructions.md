@@ -10,6 +10,9 @@ wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `Met
 - **`options.go`** — `Option` functional options: `WithRegisterer`, `WithGatherer`, `WithNamespace`, `WithRoomLabel`.
 - **`handler.go`** — `Handler()` method returning `http.Handler` for `/metrics` endpoint.
 - **`collector_test.go`** — Unit tests verifying metric values after hook calls.
+- **`connection_lifecycle_test.go`** — Component tests for connection open/close lifecycle and scrape output.
+- **`message_throughput_test.go`** — Component tests for message receive/broadcast/sent metrics.
+- **`benchmark_test.go`** — Benchmarks for hot-path Collector methods.
 
 ## Dependencies
 
@@ -21,7 +24,7 @@ wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `Met
 ```bash
 make fmt        # format source files
 make check      # fmt + lint + test (pre-commit gate)
-make test       # unit tests with race detector
+make test       # tests with race detector
 make test-cover # tests with coverage report
 make bench      # benchmarks
 make tidy       # go mod tidy
