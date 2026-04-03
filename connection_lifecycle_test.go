@@ -3,6 +3,7 @@ package prometheus_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,11 +59,10 @@ func TestConnectionLifecycle_CloseReducesActive(t *testing.T) {
 	body := scrapeBody(t, c)
 
 	// Closed count with reason=normal. Label order may vary.
-	closedMatch := assert.Condition(t, func() bool {
-		return contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) ||
-			contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`)
+	assert.Condition(t, func() bool {
+		return strings.Contains(body, `wspulse_connections_closed_total{reason="normal",room_id="test-room"} 2`) ||
+			strings.Contains(body, `wspulse_connections_closed_total{room_id="test-room",reason="normal"} 2`)
 	}, "expected 2 connections closed (reason=normal) in scrape output:\n%s", body)
-	_ = closedMatch
 
 	assert.Contains(t, body, `wspulse_connections_active{room_id="test-room"} 0`,
 		"expected 0 active connections after close")
@@ -118,18 +118,4 @@ func TestConnectionLifecycle_DisconnectReasons(t *testing.T) {
 	assert.Equal(t, float64(1),
 		requireMetricWithLabel(t, reg, "wspulse_connections_closed_total", "reason", "kick"),
 		"1 kick disconnect")
-}
-
-// contains is a helper to avoid importing strings in the test file.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchSubstring(s, substr)
-}
-
-func searchSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
