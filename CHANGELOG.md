@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.3.0] - 2026-04-04
+
+### Fixed
+
+- Added timeout to bare channel receives in tests
+
+### Changed
+
+- Migrated integration tests to deterministic component tests — zero network I/O
+- Adopted `testify` for test assertions
+
+---
+
 ## [v0.2.0] - 2026-03-27
 
 ### Added
