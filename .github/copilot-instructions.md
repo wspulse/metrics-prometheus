@@ -37,7 +37,7 @@ make tidy       # go mod tidy
 - **Metric naming**: `wspulse_` prefix, snake_case, follows [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/).
 - **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
-- **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
+- **Git**: commit messages follow [commit-message-instructions.md](.github/instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
   - **Pull request description**: must follow the repo's `.github/PULL_REQUEST_TEMPLATE.md`. Fill in every section (Summary, Changes, Checklist). Do not invent custom formats.
 - **File encoding**: all files must be UTF-8 without BOM. Do not use any other encoding.
 
@@ -59,7 +59,7 @@ All new features and design changes follow this process — do not skip steps:
 2. **STOP — test first, fix second** — when a bug is discovered or reported, do NOT touch production code until a failing test exists. Follow this exact sequence: (1) write a failing test, (2) confirm it fails, (3) fix the code, (4) confirm it passes, (5) run `make check`.
 3. **STOP — before every commit, verify this checklist:**
     1. Run `make check` (fmt → lint → test) and confirm it passes. Skip if the commit contains only non-code changes (e.g. documentation, comments, Markdown).
-    2. Commit message follows [commit-message-instructions.md](instructions/commit-message-instructions.md): correct type, subject ≤ 50 chars, numbered body items stating reason → change.
+    2. Commit message follows [commit-message-instructions.md](.github/instructions/commit-message-instructions.md): correct type, subject ≤ 50 chars, numbered body items stating reason → change.
     3. This commit contains exactly one logical change — no unrelated modifications.
     4. If any item fails — fix it before committing.
 4. **Minimal changes** — one concern per edit.
