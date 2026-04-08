@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.3.0] - 2026-04-04
+
+### Changed
+
+- Replaced integration tests with direct `Collector` component tests for deterministic metric assertions
+- Removed network I/O from the test suite
+- Adopted `testify` for test assertions
+
+---
+
 ## [v0.2.0] - 2026-03-27
 
 ### Added
