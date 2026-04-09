@@ -25,7 +25,7 @@ making any changes.
 ## Non-negotiable Rules
 
 1. **Read before write** — read the target file before any edit.
-2. **Thread safety** — all `Collector` methods are called concurrently from server goroutines. Verify any custom state is properly synchronized.
+2. **Thread safety** — all `Collector` methods are called concurrently from hub goroutines. Verify any custom state is properly synchronized.
 3. **Metric naming** — `wspulse_` prefix, snake_case, follows [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/).
 4. **No breaking changes without version bump.**
 5. **No hardcoded secrets.**
