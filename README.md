@@ -25,7 +25,7 @@ go get github.com/wspulse/metrics-prometheus
 import (
     "net/http"
 
-    "github.com/wspulse/hub"
+    wspulse "github.com/wspulse/hub"
     wsprom "github.com/wspulse/metrics-prometheus"
 )
 
