@@ -1,5 +1,5 @@
-// Package prometheus provides a Prometheus adapter for wspulse/server's
-// MetricsCollector interface. It translates server lifecycle events into
+// Package prometheus provides a Prometheus adapter for wspulse/hub's
+// MetricsCollector interface. It translates hub lifecycle events into
 // Prometheus counters, gauges, and histograms.
 package prometheus
 
@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	wspulse "github.com/wspulse/server"
+	wspulse "github.com/wspulse/hub"
 )
 
 // Collector implements wspulse.MetricsCollector using Prometheus metrics.

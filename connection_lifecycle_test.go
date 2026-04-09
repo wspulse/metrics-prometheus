@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	wspulse "github.com/wspulse/hub"
 	wsprom "github.com/wspulse/metrics-prometheus"
-	wspulse "github.com/wspulse/server"
 )
 
 // scrapeBody performs a GET /metrics against the collector's handler and

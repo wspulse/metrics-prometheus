@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `MetricsCollector` interface. It translates server lifecycle events into Prometheus counters, gauges, and histograms. Module path: `github.com/wspulse/metrics-prometheus`. Package name: `prometheus`.
+wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/hub's `MetricsCollector` interface. It translates server lifecycle events into Prometheus counters, gauges, and histograms. Module path: `github.com/wspulse/metrics-prometheus`. Package name: `prometheus`.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `Met
 
 ## Dependencies
 
-- `github.com/wspulse/server` — source of `MetricsCollector` interface
+- `github.com/wspulse/hub` — source of `MetricsCollector` interface
 - `github.com/prometheus/client_golang` — Prometheus client library
 
 ## Development Workflow
@@ -32,7 +32,7 @@ make tidy       # go mod tidy
 
 ## Conventions
 
-- **Go style**: same as wspulse/server — `gofmt`/`goimports`, GoDoc on all public symbols.
+- **Go style**: same as wspulse/hub — `gofmt`/`goimports`, GoDoc on all public symbols.
 - **Naming**: interface names use full words. Package name is `prometheus`.
 - **Metric naming**: `wspulse_` prefix, snake_case, follows [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/).
 - **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.

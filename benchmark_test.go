@@ -6,8 +6,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	wspulse "github.com/wspulse/hub"
 	wsprom "github.com/wspulse/metrics-prometheus"
-	wspulse "github.com/wspulse/server"
 )
 
 func newBenchCollector(b *testing.B, opts ...wsprom.Option) *wsprom.Collector {
