@@ -12,17 +12,17 @@ go get github.com/wspulse/metrics-prometheus
 import (
     "net/http"
 
-    wspulse "github.com/wspulse/server"
+    wspulse "github.com/wspulse/hub"
     wsprom "github.com/wspulse/metrics-prometheus"
 )
 
 collector := wsprom.NewCollector()
 
-srv := wspulse.NewServer(connect,
+hub := wspulse.NewHub(connect,
     wspulse.WithMetrics(collector),
 )
 
-http.Handle("/ws", srv)
+http.Handle("/ws", hub)
 http.Handle("/metrics", collector.Handler())
 http.ListenAndServe(":8080", nil)
 ```
@@ -165,12 +165,12 @@ collector := wsprom.NewCollector(
     wsprom.WithConnectionDurationBuckets([]float64{1, 30, 300, 3600, 86400}),
 )
 
-srv := wspulse.NewServer(connect,
+hub := wspulse.NewHub(connect,
     wspulse.WithMetrics(collector),
 )
 
 mux := http.NewServeMux()
-mux.Handle("/ws", srv)
+mux.Handle("/ws", hub)
 mux.Handle("/metrics", collector.Handler())
 http.ListenAndServe(":8080", mux)
 ```

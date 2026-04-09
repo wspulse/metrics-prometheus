@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `MetricsCollector` interface. It translates server lifecycle events into Prometheus counters, gauges, and histograms. Module path: `github.com/wspulse/metrics-prometheus`. Package name: `prometheus`.
+wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/hub's `MetricsCollector` interface. It translates hub lifecycle events into Prometheus counters, gauges, and histograms. Module path: `github.com/wspulse/metrics-prometheus`. Package name: `prometheus`.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ wspulse/metrics-prometheus is a **Prometheus adapter** for wspulse/server's `Met
 
 ## Dependencies
 
-- `github.com/wspulse/server` — source of `MetricsCollector` interface
+- `github.com/wspulse/hub` — source of `MetricsCollector` interface
 - `github.com/prometheus/client_golang` — Prometheus client library
 
 ## Development Workflow
@@ -32,7 +32,7 @@ make tidy       # go mod tidy
 
 ## Conventions
 
-- **Go style**: same as wspulse/server — `gofmt`/`goimports`, GoDoc on all public symbols.
+- **Go style**: same as wspulse/hub — `gofmt`/`goimports`, GoDoc on all public symbols.
 - **Naming**: interface names use full words. Package name is `prometheus`.
 - **Metric naming**: `wspulse_` prefix, snake_case, follows [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/).
 - **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
@@ -64,7 +64,7 @@ All new features and design changes follow this process — do not skip steps:
     4. If any item fails — fix it before committing.
 4. **Minimal changes** — one concern per edit.
 5. **No breaking changes without version bump** — exported symbols are a public contract.
-6. **Thread safety** — all `Collector` methods are called concurrently from server goroutines. Prometheus client handles this internally, but verify any custom state is properly synchronized.
+6. **Thread safety** — all `Collector` methods are called concurrently from hub goroutines. Prometheus client handles this internally, but verify any custom state is properly synchronized.
 7. **Accuracy** — verify metric names, types, and label sets against the plan in the workspace `doc/local/plan/metrics-prometheus.md`.
 8. **Documentation sync** — when changing public API or options, update `docs/reference/` and `docs/guides/metrics.md` in the docs repo.
 

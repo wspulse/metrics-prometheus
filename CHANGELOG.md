@@ -19,7 +19,7 @@
 - `Handler()` for serving `/metrics` endpoint
 - Options: `WithRegisterer`, `WithGatherer`, `WithNamespace`, `WithRoomLabel`
 - Options: `WithConnectionDurationBuckets`, `WithBroadcastFanoutBuckets`, `WithSendBufferUtilizationBuckets` for custom histogram bucket configuration
-- `connections_closed_total` and `connection_duration_seconds` include a `reason` label (`normal`, `kick`, `grace_expired`, `server_close`, `duplicate`)
+- `connections_closed_total` and `connection_duration_seconds` include a `reason` label (`normal`, `kick`, `grace_expired`, `hub_close`, `duplicate`)
 - `resume_attempts_total` counter tracking session resumptions
 - Explicit histogram bucket boundaries for `connection_duration_seconds` (1s-24h), `broadcast_fanout` (1-1000), and `send_buffer_utilization` (0.1-1.0)
 - `doc/usage.md` with metrics table, labels reference, histogram boundaries, and configuration examples

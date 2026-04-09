@@ -4,10 +4,10 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-prometheus.svg)](https://pkg.go.dev/github.com/wspulse/metrics-prometheus)
 [![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
 [![Prometheus](https://img.shields.io/badge/Prometheus-v1.22.0-blue.svg?logo=prometheus)](https://github.com/prometheus/client_golang)
-[![wspulse/server](https://img.shields.io/badge/wspulse%2Fserver-v0.6.0-blue.svg)](https://github.com/wspulse/server)
+[![wspulse/hub](https://img.shields.io/badge/wspulse%2Fhub-v0.8.1-blue.svg)](https://github.com/wspulse/hub)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Prometheus adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
+Prometheus adapter for [wspulse/hub](https://github.com/wspulse/hub)'s `MetricsCollector` interface.
 
 ---
 
@@ -25,17 +25,17 @@ go get github.com/wspulse/metrics-prometheus
 import (
     "net/http"
 
-    "github.com/wspulse/server"
+    wspulse "github.com/wspulse/hub"
     wsprom "github.com/wspulse/metrics-prometheus"
 )
 
 collector := wsprom.NewCollector()
 
-srv := wspulse.NewServer(connect,
+hub := wspulse.NewHub(connect,
     wspulse.WithMetrics(collector),
 )
 
-http.Handle("/ws", srv)
+http.Handle("/ws", hub)
 http.Handle("/metrics", collector.Handler())
 http.ListenAndServe(":8080", nil)
 ```
@@ -61,6 +61,6 @@ collector := wsprom.NewCollector(
 
 ## Related Modules
 
-- [wspulse/server](https://github.com/wspulse/server) — WebSocket server library
+- [wspulse/hub](https://github.com/wspulse/hub) — WebSocket server library
 - [wspulse/metrics-otel](https://github.com/wspulse/metrics-otel) — OpenTelemetry adapter
 - [wspulse/docs](https://github.com/wspulse/docs) — User-facing documentation
