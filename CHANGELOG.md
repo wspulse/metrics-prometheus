@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Tests
+
+- Added `TestConnectionClosed_AllReasons` covering all 5 `DisconnectReason` values (`normal`, `kick`, `grace_expired`, `hub_close`, `duplicate`) — matches the exhaustive table-driven pattern in `metrics-otel`
+
+---
+
 ## [v0.3.0] - 2026-04-04
 
 ### Changed
