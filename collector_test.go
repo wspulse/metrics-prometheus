@@ -263,6 +263,34 @@ func TestConnectionClosed(t *testing.T) {
 	assert.True(t, hasLabel(t, reg, "wspulse_connection_duration_seconds", "reason"), "connection_duration_seconds missing reason label")
 }
 
+func TestConnectionClosed_AllReasons(t *testing.T) {
+	t.Parallel()
+
+	reasons := []struct {
+		reason wspulse.DisconnectReason
+		want   string
+	}{
+		{wspulse.DisconnectNormal, "normal"},
+		{wspulse.DisconnectKick, "kick"},
+		{wspulse.DisconnectGraceExpired, "grace_expired"},
+		{wspulse.DisconnectHubClose, "hub_close"},
+		{wspulse.DisconnectDuplicate, "duplicate"},
+	}
+
+	for _, tt := range reasons {
+		t.Run(tt.want, func(t *testing.T) {
+			t.Parallel()
+			c, reg := newTestCollector(t)
+
+			c.ConnectionClosed("room1", "conn1", 2*time.Second, tt.reason)
+
+			assert.Equal(t, float64(1),
+				requireMetricWithLabel(t, reg, "wspulse_connections_closed_total", "reason", tt.want),
+				"reason=%s", tt.want)
+		})
+	}
+}
+
 func TestConnectionClosed_WithRoomLabelFalse(t *testing.T) {
 	t.Parallel()
 	c, reg := newTestCollector(t, wsprom.WithRoomLabel(false))
