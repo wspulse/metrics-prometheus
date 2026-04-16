@@ -149,7 +149,7 @@ collector := wsprom.NewCollector(
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `wspulse_pong_timeouts_total` | Counter | `room_id`* | Pong timeouts |
+| `wspulse_heartbeat_failures_total` | Counter | `room_id`* | Heartbeat failures |
 
 \* `room_id` label is only present when `WithRoomLabel(true)` is set.
 
