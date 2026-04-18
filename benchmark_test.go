@@ -77,11 +77,11 @@ func BenchmarkFrameDropped(b *testing.B) {
 	}
 }
 
-func BenchmarkPongTimeout(b *testing.B) {
+func BenchmarkHeartbeatFailed(b *testing.B) {
 	c := newBenchCollector(b)
 	b.ResetTimer()
 	for b.Loop() {
-		c.PongTimeout("room1", "conn1")
+		c.HeartbeatFailed("room1", "conn1")
 	}
 }
 
