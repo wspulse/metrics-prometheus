@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.4.0] - 2026-04-18
+
 ### Breaking changes
 
 - Renamed `PongTimeout` method to `HeartbeatFailed` to match the updated
@@ -11,6 +13,10 @@
 ### Tests
 
 - Added `TestConnectionClosed_AllReasons` covering all 5 `DisconnectReason` values (`normal`, `kick`, `grace_expired`, `hub_close`, `duplicate`) — matches the exhaustive table-driven pattern in `metrics-otel`
+
+### Changed
+
+- Upgraded `github.com/wspulse/hub` from v0.8.1 to v0.10.0.
 
 ---
 
