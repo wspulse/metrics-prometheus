@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [v0.4.0] - 2026-04-18
+## [v0.5.0] - 2026-04-18
 
 ### Breaking changes
 
@@ -20,6 +20,24 @@
 
 ---
 
+## [v0.4.0] - 2026-04-09
+
+### Changed
+
+- Migrated import path from `github.com/wspulse/server` to
+  `github.com/wspulse/hub` following the upstream rename.
+- Upgraded `github.com/wspulse/hub` from v0.6.0 to v0.8.1.
+
+### Fixed
+
+- Updated stale server references in docs and README example.
+
+### Chore
+
+- Added `pr-to-main-gate` CI workflow.
+
+---
+
 ## [v0.3.0] - 2026-04-04
 
 ### Changed
@@ -31,6 +49,19 @@
 ---
 
 ## [v0.2.0] - 2026-03-27
+
+### Breaking changes
+
+- Removed `success` label from `ResumeAttempt` to match the updated
+  `MetricsCollector` interface.
+
+### Changed
+
+- Upgraded `github.com/wspulse/server` to v0.6.0.
+
+---
+
+## [v0.1.0] - 2026-03-26
 
 ### Added
 
@@ -44,3 +75,10 @@
 - Explicit histogram bucket boundaries for `connection_duration_seconds` (1s-24h), `broadcast_fanout` (1-1000), and `send_buffer_utilization` (0.1-1.0)
 - `doc/usage.md` with metrics table, labels reference, histogram boundaries, and configuration examples
 - Benchmark suite for all hot-path methods
+
+[Unreleased]: https://github.com/wspulse/metrics-prometheus/compare/v0.5.0...HEAD
+[v0.5.0]: https://github.com/wspulse/metrics-prometheus/compare/v0.4.0...v0.5.0
+[v0.4.0]: https://github.com/wspulse/metrics-prometheus/compare/v0.3.0...v0.4.0
+[v0.3.0]: https://github.com/wspulse/metrics-prometheus/compare/v0.2.0...v0.3.0
+[v0.2.0]: https://github.com/wspulse/metrics-prometheus/compare/v0.1.0...v0.2.0
+[v0.1.0]: https://github.com/wspulse/metrics-prometheus/releases/tag/v0.1.0
