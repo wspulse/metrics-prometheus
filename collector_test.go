@@ -420,13 +420,13 @@ func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
 
 // ── Heartbeat ────────────────────────────────────────────────────────────────
 
-func TestPongTimeout(t *testing.T) {
+func TestHeartbeatFailed(t *testing.T) {
 	t.Parallel()
 	c, reg := newTestCollector(t)
 
-	c.PongTimeout("room1", "conn1")
+	c.HeartbeatFailed("room1", "conn1")
 
-	assert.Equal(t, float64(1), requireMetricWithLabel(t, reg, "wspulse_pong_timeouts_total", "room_id", "room1"), "room1 pong timeouts")
+	assert.Equal(t, float64(1), requireMetricWithLabel(t, reg, "wspulse_heartbeat_failures_total", "room_id", "room1"), "room1 heartbeat failures")
 }
 
 // ── WithRoomLabel(false) ─────────────────────────────────────────────────────
@@ -438,7 +438,7 @@ func TestWithRoomLabel_False(t *testing.T) {
 	c.ConnectionOpened("room1", "conn1")
 	c.MessageReceived("room1", 100)
 	c.FrameDropped("room1", "conn1")
-	c.PongTimeout("room1", "conn1")
+	c.HeartbeatFailed("room1", "conn1")
 
 	// Verify metrics exist but have no room_id label.
 	assert.Equal(t, float64(1), metricValue(t, reg, "wspulse_connections_opened_total"), "opened (no room label)")

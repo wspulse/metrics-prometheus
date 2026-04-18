@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Renamed `PongTimeout` method to `HeartbeatFailed` to match the updated
+  `MetricsCollector` interface. Prometheus metric renamed from
+  `wspulse_pong_timeouts_total` to `wspulse_heartbeat_failures_total`.
+
 ### Tests
 
 - Added `TestConnectionClosed_AllReasons` covering all 5 `DisconnectReason` values (`normal`, `kick`, `grace_expired`, `hub_close`, `duplicate`) — matches the exhaustive table-driven pattern in `metrics-otel`

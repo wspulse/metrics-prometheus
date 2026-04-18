@@ -39,7 +39,7 @@ type Collector struct {
 	sendBufferUtilization *prometheus.HistogramVec
 
 	// Heartbeat
-	pongTimeouts *prometheus.CounterVec
+	heartbeatFailures *prometheus.CounterVec
 }
 
 // compile-time check: Collector must satisfy wspulse.MetricsCollector.
@@ -154,10 +154,10 @@ func NewCollector(opts ...Option) *Collector {
 		}, roomLabels),
 
 		// Heartbeat
-		pongTimeouts: prometheus.NewCounterVec(prometheus.CounterOpts{
+		heartbeatFailures: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: ns,
-			Name:      "pong_timeouts_total",
-			Help:      "Total number of pong timeouts.",
+			Name:      "heartbeat_failures_total",
+			Help:      "Total number of heartbeat failures.",
 		}, roomLabels),
 	}
 
@@ -169,7 +169,7 @@ func NewCollector(opts ...Option) *Collector {
 		c.messagesReceived, c.messagesReceivedBytes,
 		c.messagesBroadcast, c.broadcastFanout,
 		c.messagesSent, c.framesDropped, c.sendBufferUtilization,
-		c.pongTimeouts,
+		c.heartbeatFailures,
 	}
 	for _, col := range collectors {
 		if err := cfg.registerer.Register(col); err != nil {
@@ -283,11 +283,11 @@ func (c *Collector) SendBufferUtilization(roomID, _ string, used, capacity int) 
 	}
 }
 
-// PongTimeout increments the pong timeouts counter.
-func (c *Collector) PongTimeout(roomID, _ string) {
+// HeartbeatFailed increments the heartbeat failures counter.
+func (c *Collector) HeartbeatFailed(roomID, _ string) {
 	if c.cfg.roomLabel {
-		c.pongTimeouts.WithLabelValues(roomID).Inc()
+		c.heartbeatFailures.WithLabelValues(roomID).Inc()
 	} else {
-		c.pongTimeouts.WithLabelValues().Inc()
+		c.heartbeatFailures.WithLabelValues().Inc()
 	}
 }
