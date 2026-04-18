@@ -35,10 +35,6 @@
 
 - Updated stale server references in docs and README example.
 
-### Chore
-
-- Added `pr-to-main-gate` CI workflow.
-
 ---
 
 ## [v0.3.0] - 2026-04-04
